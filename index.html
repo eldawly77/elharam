@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>امتحان تاريخ مصر القديمة</title>
+<style>
+body { font-family: Arial; background:#f2f2f2 url('https://upload.wikimedia.org/wikipedia/commons/e/e3/Giza_Plateau_-_Pyramids.jpg') no-repeat center top; background-size:cover; color:#003366; padding:20px; }
+.container { background:white; max-width:900px; margin:auto; padding:25px; border-radius:15px; box-shadow:0 0 15px rgba(0,0,0,0.2); }
+h1,h2 { text-align:center; }
+.question { margin:15px 0; }
+input[type="radio"]{margin:5px;}
+input[type="text"], input[type="password"], select {width:60%; padding:8px; margin:5px 0;}
+button{padding:10px 15px; background:#003366; color:white; border:none; border-radius:5px; cursor:pointer; margin-top:10px;}
+button:hover{background:#0055aa;}
+.adminSection{ display:none; margin-top:20px; padding:10px; border:1px solid #003366; border-radius:10px; background:#eef; }
+table{ width:100%; text-align:center; border-collapse: collapse; }
+table, th, td { border:1px solid #003366; padding:5px; }
+</style>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  // ضع هنا بيانات مشروعك من Firebase
+  const firebaseConfig = {
+  apiKey: "AIzaSyDaApfTu5UH1vWsBuYVwbZY9-V5mUKX49s",
+  authDomain: "eguptexam.firebaseapp.com",
+  databaseURL: "https://eguptexam-default-rtdb.firebaseio.com",
+  projectId: "eguptexam",
+  storageBucket: "eguptexam.firebasestorage.app",
+  messagingSenderId: "286716483155",
+  appId: "1:286716483155:web:9edd97f5e87eef666698a6",
+  measurementId: "G-5VVGCQG9W6"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
+</head>
+<body>
+<div class="container">
+<h1>مجهود طالب</h1>
+<h2>امتحان تاريخ مصر القديمة</h2>
+
+<!-- واجهة الطالب -->
+<div id="loginSection">
+<p>ادخل اسمك الثلاثي والسنة الدراسية:</p>
+<input type="text" id="studentName" placeholder="الاسم الثلاثي">
+<input type="text" id="year" placeholder="السنة الدراسية">
+<p>اختر مدرجك:</p>
+<select id="studentClass">
+  <option value="">اختر المدرج</option>
+  <option value="مدرج 1">مدرج 1</option>
+  <option value="مدرج 2">مدرج 2</option>
+  <option value="مدرج 3">مدرج 3</option>
+  <option value="مدرج 4">مدرج 4</option>
+</select>
+<br>
+<button onclick="startExam()">ابدأ الامتحان</button>
+</div>
+
+<div id="examSection" style="display:none;"></div>
+
+<!-- واجهة Admin -->
+<div id="adminSection">
+<h2>صفحة Admin</h2>
+<p>ادخل يوزر وباسورد:</p>
+<input type="text" id="adminUser" placeholder="Username">
+<input type="password" id="adminPass" placeholder="Password">
+<button onclick="loginAdmin()">دخول Admin</button>
+<button onclick="loadResults()">عرض النتائج</button>
+<div id="adminData"></div>
+</div>
+
+<script>
+// بيانات الأسئلة
+const questions=[
+{q:"1- المعادي ترجع لأي عصر؟",a:["العصر الحجري القديم","العصر الحجري الحديث","العصر النحاسي"],correct:"b"},
+{q:"2- حلوان تقع بين؟",a:["حلوان ونهاية وادي حوف","القاهرة وجرينتش"],correct:"a"},
+{q:"3- هليوبوليس كانت تعرف باسم؟",a:["عين شمس","أيون","المعادي"],correct:"b"},
+{q:"4- محاجر طره اشتهرت بالحجر؟",a:["الجيري الأبيض","الكوارتزيت"],correct:"a"},
+{q:"5- اسم سيناء مشتق من؟",a:["إله الشمس","إله القمر"],correct:"b"},
+{q:"6- شمال سيناء عاصمتها؟",a:["العريش","شرم الشيخ"],correct:"a"},
+{q:"7- جنوب سيناء يوجد؟",a:["سرابيط الخادم","العريش"],correct:"a"},
+{q:"8- جبال سيناء تحتوي على؟",a:["سهول وكثبان","صخور نارية"],correct:"b"},
+{q:"9- الطريق العسكري المهم في شمال سيناء؟",a:["طريق حورس","طريق الكباش"],correct:"a"},
+{q:"10- مقصورة المعبد هي؟",a:["غرفة الأقدس للكهنة","الفناء الخارجي للناس"],correct:"a"},
+{q:"11- المعابد في سيناء كانت لعبادة؟",a:["حتحور","رع"],correct:"a"},
+{q:"12- المقابر في حلوان كانت؟",a:["داخل المساكن","خارج المساكن"],correct:"a"},
+{q:"13- السكان عرفوا النحاس في؟",a:["سيناء","القاهرة"],correct:"a"},
+{q:"14- عين شمس كانت مركز لعبادة؟",a:["الشمس","القمر"],correct:"a"},
+{q:"15- مقصورة المعبد يضع فيها؟",a:["التمثال أو الرمز الديني","المصلى"],correct:"a"},
+{q:"16- سكان المعادي صنعوا أدوات من؟",a:["النحاس","الحديد"],correct:"a"},
+{q:"17- جبال سيناء الجنوبية تتكون من؟",a:["جبال وعرة وصخور نارية","سهول وكثبان"],correct:"a"},
+{q:"18- طريق حورس كان؟",a:["طريق عسكري مهم","طريق تجاري فقط"],correct:"a"},
+{q:"19- المحاجر استخدم فيها الحجر في؟",a:["بناء الأهرامات","بناء المنازل فقط"],correct:"a"},
+{q:"20- السكان دفنوا موتاهم؟",a:["داخل المساكن وخارجها","خارج المساكن فقط"],correct:"a"}
+];
+
+let studentData = {};
+
+// عرض الامتحان
+function startExam(){
+    let name=document.getElementById("studentName").value.trim();
+    let year=document.getElementById("year").value.trim();
+    let studentClass=document.getElementById("studentClass").value;
+    if(name==="" || year==="" || studentClass===""){ 
+        alert("من فضلك اكتب كل البيانات المطلوبة واختر المدرج"); 
+        return; 
+    }
+    studentData = {name:name,year:year,class:studentClass,answers:{},score:0};
+    document.getElementById("loginSection").style.display="none";
+    let html="";
+    questions.forEach((item,index)=>{
+        html+=`<div class="question"><p>${item.q}</p>`;
+        item.a.forEach((ans,ai)=>{
+            html+=`<input type="radio" name="q${index+1}" value="${String.fromCharCode(97+ai)}" onclick="saveAnswer('q${index+1}','${String.fromCharCode(97+ai)}')"> ${ans}<br>`;
+        });
+        html+="</div>";
+    });
+    html+='<button onclick="submitExam()">تسليم</button>';
+    document.getElementById("examSection").innerHTML=html;
+    document.getElementById("examSection").style.display="block";
+}
+
+function saveAnswer(qid,ans){ studentData.answers[qid]=ans; }
+
+// تسليم الامتحان وحفظه في Firebase
+function submitExam(){
+    let score=0;
+    questions.forEach((item,index)=>{
+        let qid="q"+(index+1);
+        if(studentData.answers[qid]===item.correct) score++;
+    });
+    studentData.score=score;
+    studentData.submittedAt=new Date().toISOString();
+    const key=studentData.name.replace(/\s+/g,"_")+"_"+Date.now();
+    db.ref('results/'+key).set(studentData,function(error){
+        if(error){
+            alert("حدث خطأ أثناء حفظ النتيجة: "+error.message);
+        }else{
+            alert("برافو عليك! شاطر كتكوت 😎\nدرجتك: "+score+" من 20");
+            document.getElementById("examSection").style.display="none";
+            document.getElementById("loginSection").style.display="block";
+            document.getElementById("studentName").value="";
+            document.getElementById("year").value="";
+            document.getElementById("studentClass").value="";
+        }
+    });
+}
+
+// Admin login
+function loginAdmin(){
+    let user=document.getElementById("adminUser").value;
+    let pass=document.getElementById("adminPass").value;
+    if(user==="ah7mod" && pass==="ahmedmini7"){
+        document.getElementById("adminSection").style.display="block";
+        alert("تم تسجيل الدخول كـ Admin، اضغط 'عرض النتائج' لرؤية كل الطلاب");
+    }else{ alert("يوزر أو باسورد خطأ"); }
+}
+
+// جلب النتائج عند ضغط الزر
+function loadResults(){
+    db.ref('results').once('value').then(snapshot=>{
+        const data=snapshot.val();
+        let dataHTML="<h3>نتائج الطلاب:</h3><table><tr><th>اسم الطالب</th><th>السنة</th><th>المدرج</th><th>الدرجة</th><th>وقت الإرسال</th><th>الإجابات</th></tr>";
+        if(data){
+            Object.keys(data).forEach(key=>{
+                const s=data[key];
+                let answersStr="";
+                for(let i=1;i<=20;i++){
+                    let qid="q"+i;
+                    answersStr+=(s.answers && s.answers[qid]?s.answers[qid]:"-")+" ";
+                }
+                dataHTML+=`<tr>
+                    <td>${s.name||""}</td>
+                    <td>${s.year||""}</td>
+                    <td>${s.class||""}</td>
+                    <td>${s.score||0}</td>
+                    <td>${s.submittedAt||""}</td>
+                    <td>${answersStr}</td>
+                </tr>`;
+            });
+        }
+        dataHTML+="</table>";
+        document.getElementById("adminData").innerHTML=dataHTML;
+    }).catch(err=>{alert("حدث خطأ أثناء جلب النتائج: "+err.message);});
+}
+</script>
+</body>
+</html>
