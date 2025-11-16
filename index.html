@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PLAN B - منصة الامتحانات</title>
+<style>
+:root{
+  --gold:#C99A4E;
+  --dark:#003366;
+  --card-bg:#ffffff;
+  --muted:#666;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  background: #f6f6f6;
+  color:var(--dark);
+}
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 18px;
+  background:transparent;
+}
+.left-controls{display:flex;gap:10px;align-items:center;}
+.menu-btn{
+  width:44px;height:44px;border-radius:8px;border:none;background:transparent;font-size:22px;cursor:pointer;
+}
+.logo{
+  display:inline-block;
+  padding:8px 18px;
+  border-radius:8px;
+  background:linear-gradient(180deg, #f7e6c9, #e5c97d);
+  color:#3b2b10;
+  font-weight:800;
+  letter-spacing:1px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  font-size:20px;
+}
+.top-right{display:flex;align-items:center;gap:12px;}
+.admin-icon{
+  width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,0.06);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:700;color:var(--dark)
+}
+.container{
+  max-width:920px;margin:18px auto;padding:18px;
+  background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06);
+}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+.input{width:100%;max-width:320px;padding:10px;border-radius:8px;border:1px solid #ddd;}
+.start-btn{background:var(--gold);color:#1b1b1b;border:none;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
+.start-btn:hover{opacity:0.95}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.card{
+  background:var(--card-bg);border-radius:10px;padding:14px;margin-bottom:14px;box-shadow:0 3px 10px rgba(0,0,0,0.04);
+}
+.question-text{font-weight:700;margin-bottom:8px}
+.options{margin-left:6px}
+.option{display:block;margin:8px 0;font-size:15px;cursor:pointer}
+.timer{
+  padding:8px 12px;border-radius:8px;border:1px dashed #ddd;color:var(--muted);font-weight:700
+}
+.small{font-size:13px;color:var(--muted)}
+.footer{margin-top:18px;display:flex;justify-content:space-between;align-items:center}
+
+.table-wrap{overflow:auto;max-height:420px;border:1px solid #eee;padding:8px;border-radius:8px;background:#fafafa}
+
+.btn-danger{background:#e74c3c;color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
+.btn-secondary{background:#eee;color:#000;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
+
+@media (max-width:720px){
+  .container{margin:10px;padding:12px}
+  .logo{font-size:18px;padding:6px 12px}
+  .input{max-width:100%}
+}
+</style>
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // ===== firebaseConfig (استخدم نفس القيم اللي عندك) =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyDaApfTu5UH1vWsBuYVwbZY9-V5mUKX49s",
+    authDomain: "eguptexam.firebaseapp.com",
+    databaseURL: "https://eguptexam-default-rtdb.firebaseio.com",
+    projectId: "eguptexam",
+    storageBucket: "eguptexam.firebasestorage.app",
+    messagingSenderId: "286716483155",
+    appId: "1:286716483155:web:9edd97f5e87eef666698a6",
+    measurementId: "G-5VVGCQG9W6"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
+</head>
+<body>
+
+<div class="header">
+  <div class="left-controls">
+    <button id="menuDots" class="menu-btn" title="اختر المادة">⋮</button>
+  </div>
+
+  <div style="text-align:center">
+    <div class="logo">PLAN B</div>
+  </div>
+
+  <div class="top-right">
+    <div id="timerDisplay" class="timer small">الوقت: —:—</div>
+    <div id="adminBtn" class="admin-icon" title="ادمن">ادمن</div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- شاشة البداية / تسجيل الطالب -->
+  <div id="homeSection">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800;font-size:18px">ابدأ الامتحان</div>
+          <div class="small">اكتب بياناتك واختر المادة ثم اضغط ابدأ</div>
+        </div>
+        <div>
+          <div class="small">مدة الاختبار</div>
+          <div style="font-weight:800;font-size:16px">30 دقيقة</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px" class="row">
+        <input id="studentName" class="input" placeholder="الاسم الثلاثي (مثال: محمد علي حسن)">
+        <input id="year" class="input" placeholder="السنة الدراسية (مثال: السنة الأولى)">
+        <select id="studentClass" class="input">
+          <option value="">اختر المدرج</option>
+          <option>مدرج 1</option>
+          <option>مدرج 2</option>
+          <option>مدرج 3</option>
+          <option>مدرج 4</option>
+        </select>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div id="subjectLabel" class="small" style="min-width:160px">المادة: —</div>
+        <button id="startExamBtn" class="start-btn" onclick="startExam()">ابدأ</button>
+      </div>
+    </div>
+
+    <div class="small" style="margin-top:10px;color:var(--muted)">ملاحظة: اختر المادة من زر الثلاث نقاط أعلى يسار.</div>
+  </div>
+
+  <!-- قسم الامتحان -->
+  <div id="examSection" style="display:none">
+    <div id="questionsWrapper"></div>
+    <div style="text-align:center">
+      <button id="submitBtn" class="start-btn" onclick="submitExam()">تسليم</button>
+    </div>
+  </div>
+
+  <!-- Admin area (login modal simulated inline) -->
+  <div id="adminModal" style="display:none;margin-top:12px" class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><strong>دخول الأدمن</strong></div>
+      <div><button style="background:#eee;padding:6px 10px;border-radius:6px;border:1px solid #ddd;cursor:pointer" onclick="closeAdmin()">إغلاق</button></div>
+    </div>
+    <div style="margin-top:10px">
+      <input id="adminUser" class="input" placeholder="Username">
+      <input id="adminPass" class="input" placeholder="Password" type="password">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="start-btn" onclick="loginAdmin()">دخول Admin</button>
+        <button id="btnShowResults" style="background:#eee;color:#000;border:none;padding:10px;border-radius:8px;cursor:pointer" onclick="loadResults()">عرض النتائج</button>
+      </div>
+    </div>
+    <div id="adminControls" style="margin-top:14px;display:none">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <div class="small">تصفية حسب المادة:</div>
+        <select id="filterSubject" class="input" style="max-width:180px">
+          <option value="">الكل</option>
+          <option value="history">تاريخ مصر القديمة</option>
+          <option value="economy">مبادئ الاقتصاد</option>
+        </select>
+        <button class="start-btn" onclick="loadResults()">تحديث</button>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <button class="btn-danger" onclick="deleteSelected()">مسح المحدد</button>
+        <button class="btn-secondary" onclick="deleteAllConfirm()">مسح الكل</button>
+      </div>
+
+      <div id="resultsList" class="table-wrap"></div>
+    </div>
+
+    <div id="adminData" style="margin-top:14px"></div>
+  </div>
+
+</div>
+
+<script>
+/* ================== بيانات الأسئلة للمادتين ================== */
+/* (التاريخ) */
+const historyQuestions = [
+{ q:"1- المعادي ترجع لأي عصر؟", a:["العصر الحجري القديم","العصر الحجري الحديث","العصر النحاسي"], correct:"b"},
+{ q:"2- حلوان تقع بين؟", a:["حلوان ونهاية وادي حوف","القاهرة وجرينتش"], correct:"a"},
+{ q:"3- هليوبوليس كانت تعرف باسم؟", a:["عين شمس","أيون","المعادي"], correct:"b"},
+{ q:"4- محاجر طره اشتهرت بالحجر؟", a:["الجيري الأبيض","الكوارتزيت"], correct:"a"},
+{ q:"5- اسم سيناء مشتق من؟", a:["إله الشمس","إله القمر"], correct:"b"},
+{ q:"6- شمال سيناء عاصمتها؟", a:["العريش","شرم الشيخ"], correct:"a"},
+{ q:"7- جنوب سيناء يوجد؟", a:["سرابيط الخادم","العريش"], correct:"a"},
+{ q:"8- جبال سيناء تحتوي على؟", a:["سهول وكثبان","صخور نارية"], correct:"b"},
+{ q:"9- الطريق العسكري المهم في شمال سيناء؟", a:["طريق حورس","طريق الكباش"], correct:"a"},
+{ q:"10- مقصورة المعبد هي؟", a:["غرفة الأقدس للكهنة","الفناء الخارجي للناس"], correct:"a"},
+{ q:"11- المعابد في سيناء كانت لعبادة؟", a:["حتحور","رع"], correct:"a"},
+{ q:"12- المقابر في حلوان كانت؟", a:["داخل المساكن","خارج المساكن"], correct:"a"},
+{ q:"13- السكان عرفوا النحاس في؟", a:["سيناء","القاهرة"], correct:"a"},
+{ q:"14- عين شمس كانت مركز لعبادة؟", a:["الشمس","القمر"], correct:"a"},
+{ q:"15- مقصورة المعبد يضع فيها؟", a:["التمثال أو الرمز الديني","المصلى"], correct:"a"},
+{ q:"16- سكان المعادي صنعوا أدوات من؟", a:["النحاس","الحديد"], correct:"a"},
+{ q:"17- جبال سيناء الجنوبية تتكون من؟", a:["جبال وعرة وصخور نارية","سهول وكثبان"], correct:"a"},
+{ q:"18- طريق حورس كان؟", a:["طريق عسكري مهم","طريق تجاري فقط"], correct:"a"},
+{ q:"19- المحاجر استخدم فيها الحجر في؟", a:["بناء الأهرامات","بناء المنازل فقط"], correct:"a"},
+{ q:"20- السكان دفنوا موتاهم؟", a:["داخل المساكن وخارجها","خارج المساكن فقط"], correct:"a"}
+];
+
+/* (مبادئ الاقتصاد) */
+const econQuestions = [
+{ q:"1- أي نظام اقتصادي يعتمد على الملكية الخاصة وحرية السوق؟", a:["الاشتراكي","الرأسمالي","المخطط","المختلط"], correct:"b"},
+{ q:"2- في النظام الاشتراكي، من يحدد أسعار السلع والخدمات؟", a:["الحكومة","السوق","الشركات الخاصة","المستهلك"], correct:"a"},
+{ q:"3- النظام الاقتصادي الذي يجمع بين خصائص الرأسمالية والاشتراكية يسمى:", a:["الرأسمالي","الاشتراكي","المختلط","التقليدي"], correct:"c"},
+{ q:"4- في النظام التقليدي، يتم اتخاذ القرارات الاقتصادية بناءً على:", a:["العرض والطلب","العادات والتقاليد","الحكومة","المنافسة"], correct:"b"},
+{ q:"5- من مميزات النظام الرأسمالي:", a:["ملكية الدولة للموارد","حرية اختيار المستهلك","تخطيط مركزي","توزيع الموارد بالتساوي"], correct:"b"},
+{ q:"6- إذا ارتفع سعر السلعة، ماذا يحدث عادة للكمية المطلوبة؟", a:["تزداد","تقل","تبقى ثابتة","لا علاقة"], correct:"b"},
+{ q:"7- إذا انخفض سعر السلعة، ماذا يحدث عادة للكمية المعروضة؟", a:["تزيد","تقل","تبقى ثابتة","تتضاعف"], correct:"b"},
+{ q:"8- منحنى الطلب يميل عادة:", a:["إلى الأعلى","إلى الأسفل","أفقي","عمودي"], correct:"b"},
+{ q:"9- أي العوامل التالية يؤثر في الطلب على السلعة؟", a:["دخل المستهلك","أسعار السلع الأخرى","أذواق المستهلك","كل ما سبق"], correct:"d"},
+{ q:"10- عندما يزيد العرض على الطلب، يحدث عادة:", a:["ارتفاع الأسعار","انخفاض الأسعار","استقرار الأسعار","تضخم"], correct:"b"},
+{ q:"11- ما هو الهدف الأساسي للمستهلك حسب نظرية سلوك المستهلك؟", a:["تحقيق الربح","تعظيم المنفعة","زيادة الإنتاج","تقليل التكاليف"], correct:"b"},
+{ q:"12- ما هي المنفعة الحدية؟", a:["القيمة الإجمالية للسلعة","المنفعة من وحدة إضافية","سعر السلعة","تكلفة السلعة"], correct:"b"},
+{ q:"13- إذا كانت المنفعة الحدية للسلعة تساوي صفر، فهذا يعني:", a:["المستهلك سيشتري المزيد","المستهلك راضٍ تماماً","المستهلك سيقلل الشراء","لا تأثير"], correct:"b"},
+{ q:"14- قانون الطلب ينص على أن:", a:["كلما زاد السعر زاد الطلب","كلما زاد السعر قل الطلب","الطلب لا يتأثر بالسعر","السعر ثابت دائماً"], correct:"b"},
+{ q:"15- إذا ارتفع دخل المستهلك، فإن الطلب على السلعة العادية:", a:["ينخفض","يزيد","يبقى ثابتاً","يتوقف"], correct:"b"},
+{ q:"16- أي من التالي يعتبر سلعة منخفضة الطلب مع ارتفاع الدخل؟", a:["السلعة العادية","السلعة الكمالية","السلعة الدونية","السلعة النادرة"], correct:"c"},
+{ q:"17- إذا زاد سعر السلعة البديلة، فإن الطلب على السلعة الأصلية:", a:["يقل","يزيد","يبقى ثابتاً","غير محدد"], correct:"b"},
+{ q:"18- منحنى العرض يميل عادة:", a:["إلى الأعلى","إلى الأسفل","أفقي","عمودي"], correct:"a"},
+{ q:"19- نقطة توازن السوق هي حيث:", a:["العرض أكبر من الطلب","الطلب أكبر من العرض","العرض = الطلب","لا علاقة"], correct:"c"},
+{ q:"20- إذا فرضت الحكومة ضريبة على سلعة ما، فإن:", a:["العرض يزداد","العرض يقل","الطلب يزداد","الطلب يقل"], correct:"b"}
+];
+
+/* ========== حالة التطبيق =========== */
+let currentSubject = null; // 'history' أو 'economy'
+let studentData = null;
+let timerInterval = null;
+
+/* ====== menu three dots (subject selection) ====== */
+const menuDots = document.getElementById('menuDots');
+const subjectLabel = document.getElementById('subjectLabel');
+menuDots.addEventListener('click', ()=> {
+  const choice = prompt("اختر المادة (اكتب: 1 للتاريخ، 2 لمبادئ الاقتصاد):\n1 - تاريخ مصر القديمة\n2 - مبادئ الاقتصاد");
+  if(choice === null) return;
+  if(choice.trim()==="1"){ currentSubject='history'; subjectLabel.innerText='المادة: تاريخ مصر القديمة'; }
+  else if(choice.trim()==="2"){ currentSubject='economy'; subjectLabel.innerText='المادة: مبادئ الاقتصاد'; }
+  else alert('اختيار غير صحيح');
+});
+
+/* ===== عرض الاسئلة (كروت) ===== */
+function renderQuestions(){
+  const wrapper = document.getElementById('questionsWrapper');
+  wrapper.innerHTML='';
+  const arr = currentSubject==='economy' ? econQuestions : historyQuestions;
+  arr.forEach((item, idx)=>{
+    const qid = 'q'+(idx+1);
+    const card = document.createElement('div');
+    card.className = 'card';
+    // question text
+    const qtxt = document.createElement('div'); qtxt.className='question-text'; qtxt.innerText = (idx+1) + '. ' + item.q;
+    card.appendChild(qtxt);
+    // options
+    const opts = document.createElement('div'); opts.className='options';
+    item.a.forEach((opt, oi)=>{
+      const val = String.fromCharCode(97+oi); // a,b,c,...
+      const label = document.createElement('label');
+      label.className='option';
+      label.innerHTML = <input type="radio" name="${qid}" value="${val}" onclick="saveAnswer('${qid}','${val}')">  ${opt};
+      opts.appendChild(label);
+    });
+    card.appendChild(opts);
+    wrapper.appendChild(card);
+  });
+}
+
+/* ===== start exam: init student data and timer ===== */
+function startExam(){
+  if(!currentSubject){ alert('من فضلك اختر المادة من زر الثلاث نقاط أولاً'); return; }
+  const name = document.getElementById('studentName').value.trim();
+  const year = document.getElementById('year').value.trim();
+  const sclass = document.getElementById('studentClass').value;
+  if(!name || !year || !sclass){ alert('اكمل البيانات: الاسم، السنة، المدرج'); return; }
+
+  // init studentData
+  studentData = { name, year, class: sclass, subject: currentSubject, answers:{}, score:0, submittedAt:null, forcedExit:false};
+  // store temporary in localStorage to persist across refresh
+  localStorage.setItem('currentStudent', JSON.stringify(studentData));
+
+  // set exam end time (30 mins) and store
+  const existingEnd = localStorage.getItem('endTime_' + sanitizeKey(name + '_' + currentSubject));
+  let endTime;
+  if(existingEnd){
+    endTime = parseInt(existingEnd,10);
+  }else{
+    endTime = Date.now() + 30*60*1000; // 30 minutes
+    localStorage.setItem('endTime_' + sanitizeKey(name + '_' + currentSubject), String(endTime));
+  }
+
+  // render UI
+  document.getElementById('homeSection').style.display='none';
+  document.getElementById('examSection').style.display='block';
+  renderQuestions();
+  startTimer(endTime);
+}
+
+/* ===== timer functions ===== */
+function startTimer(endTime){
+  updateTimerDisplay(endTime);
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    updateTimerDisplay(endTime);
+  }, 1000);
+}
+
+function updateTimerDisplay(endTime){
+  const now = Date.now();
+  let remaining = Math.max(0, Math.floor((endTime - now)/1000));
+  const mins = String(Math.floor(remaining/60)).padStart(2,'0');
+  const secs = String(remaining%60).padStart(2,'0');
+  document.getElementById('timerDisplay').innerText = الوقت: ${mins}:${secs};
+  if(remaining<=0){
+    // time up -> force submit
+    if(timerInterval) clearInterval(timerInterval);
+    alert('انتهى الوقت: تم تسليم الامتحان تلقائياً');
+    forceSubmitDueToTimeout();
+  }
+}
+
+/* ===== save answer locally in studentData (does not reveal correct answer) ===== */
+function saveAnswer(qid, ans){
+  // reload studentData if lost
+  if(!studentData){
+    const s = localStorage.getItem('currentStudent');
+    if(s) studentData = JSON.parse(s);
+    else { alert('حصل خطأ: لم يبدأ الامتحان بشكل صحيح'); return; }
+  }
+  studentData.answers[qid]=ans;
+  localStorage.setItem('currentStudent', JSON.stringify(studentData));
+}
+
+/* ===== submit exam normally ===== */
+function submitExam(){
+  if(!studentData){ alert('لم يبدأ الامتحان'); return;}
+  // compute score
+  const arr = studentData.subject === 'economy' ? econQuestions : historyQuestions;
+  let score = 0;
+  for(let i=0;i<arr.length;i++){
+    const qid = 'q'+(i+1);
+    if(studentData.answers[qid] && studentData.answers[qid] === arr[i].correct) score++;
+  }
+  studentData.score = score;
+  studentData.submittedAt = new Date().toISOString();
+  studentData.forcedExit = false;
+
+  // save to firebase under results/{key}
+  const key = sanitizeKey(studentData.name) + '' + studentData.subject + '' + Date.now();
+  db.ref('results/' + key).set(studentData, function(err){
+    if(err){ alert('حصل خطأ أثناء الحفظ: ' + err.message); }
+    else{
+      // clear end time and currentStudent local markers
+      localStorage.removeItem('endTime_' + sanitizeKey(studentData.name + '_' + studentData.subject));
+      localStorage.removeItem('currentStudent');
+      // disable exam UI and show message
+      finalizeStudentAfterSubmit(score);
+    }
+  });
+}
+
+/* ===== forced submit when time ended ===== */
+function forceSubmitDueToTimeout(){
+  if(!studentData){
+    // try restore from localstorage
+    const s = localStorage.getItem('currentStudent');
+    if(s) studentData = JSON.parse(s);
+    else { alert('وقت الامتحان انتهى'); location.reload(); return; }
+  }
+  // compute score for answers given so far
+  const arr = studentData.subject === 'economy' ? econQuestions : historyQuestions;
+  let score = 0;
+  for(let i=0;i<arr.length;i++){
+    const qid = 'q'+(i+1);
+    if(studentData.answers[qid] && studentData.answers[qid] === arr[i].correct) score++;
+  }
+  studentData.score = score;
+  studentData.submittedAt = new Date().toISOString();
+  studentData.forcedExit = true;
+
+  const key = sanitizeKey(studentData.name) + '' + studentData.subject + '' + Date.now();
+  db.ref('results/' + key).set(studentData, function(err){
+    // regardless of error, clear flags and go back
+    localStorage.removeItem('endTime_' + sanitizeKey(studentData.name + '_' + studentData.subject));
+    localStorage.removeItem('currentStudent');
+    finalizeStudentAfterSubmit(score);
+  });
+}
+
+/* ===== finalize UI after submit ===== */
+function finalizeStudentAfterSubmit(score){
+  // disable inputs
+  const radios = document.querySelectorAll('#questionsWrapper input[type=radio]');
+  radios.forEach(r=> r.disabled = true);
+  // show message and redirect back to home
+  setTimeout(()=>{
+    alert('اشطر كتكوت\nدرجتك: ' + score + ' من 20');
+    document.getElementById('examSection').style.display='none';
+    document.getElementById('homeSection').style.display='block';
+    document.getElementById('studentName').value='';
+    document.getElementById('year').value='';
+    document.getElementById('studentClass').value='';
+    document.getElementById('timerDisplay').innerText = 'الوقت: —:—';
+    // stop timer
+    if(timerInterval) clearInterval(timerInterval);
+    studentData = null;
+  }, 300);
+}
+
+/* ===== Admin logic ===== */
+document.getElementById('adminBtn').addEventListener('click', ()=> {
+  // show admin modal area
+  document.getElementById('adminModal').style.display = 'block';
+});
+
+function closeAdmin(){ document.getElementById('adminModal').style.display='none'; document.getElementById('adminData').innerHTML=''; document.getElementById('adminControls').style.display='none'; document.getElementById('resultsList').innerHTML=''; }
+
+function loginAdmin(){
+  const user = document.getElementById('adminUser').value.trim();
+  const pass = document.getElementById('adminPass').value.trim();
+  if(user==='ah7mod' && pass==='ahmedmini7'){
+    alert('تم تسجيل الدخول كـ Admin — اضغط عرض النتائج لاستخراجها');
+    document.getElementById('adminControls').style.display='block';
+    // prefill filter to empty
+    document.getElementById('filterSubject').value = '';
+  } else alert('يوزر أو باسورد خطأ');
+}
+
+/* ===== load results (admin) - reads from Firebase and shows table with checkboxes ===== */
+function loadResults(){
+  const user = document.getElementById('adminUser').value.trim();
+  const pass = document.getElementById('adminPass').value.trim();
+  if(!(user==='ah7mod' && pass==='ahmedmini7')){ alert('يجب تسجيل الدخول كـ Admin أولاً'); return; }
+
+  const filter = document.getElementById('filterSubject').value || null;
+
+  db.ref('results').once('value').then(snapshot=>{
+    const data = snapshot.val();
+    let html = "<div style='margin-bottom:8px;font-weight:700'>قائمة النتائج (اختر نتائج ثم اضغط مسح المحدد)</div>";
+    html += <table style='width:100%;text-align:center;border-collapse:collapse'><thead><tr style="background:#f1f1f1"><th><input id="chkAll" type="checkbox" onchange="toggleAll(this)"></th><th>الاسم</th><th>السنة</th><th>المدرج</th><th>المادة</th><th>الدرجة</th><th>وقت الإرسال</th></tr></thead><tbody>;
+    if(data){
+      Object.keys(data).forEach(k=>{
+        const s = data[k];
+        if(filter && s.subject !== filter) return;
+        const subjLabel = s.subject === 'economy' ? 'مبادئ الاقتصاد' : 'تاريخ مصر القديمة';
+        html += <tr data-key="${k}"><td><input class="rowChk" type="checkbox" data-key="${k}"></td><td>${escapeHtml(s.name||'')}</td><td>${escapeHtml(s.year||'')}</td><td>${escapeHtml(s.class||'')}</td><td>${subjLabel}</td><td>${s.score||0}</td><td>${s.submittedAt||''}</td></tr>;
+      });
+    }
+    html += "</tbody></table>";
+    document.getElementById('resultsList').innerHTML = html;
+  }).catch(err=>{ alert('حدث خطأ أثناء جلب النتائج: ' + err.message); });
+}
+
+/* ===== toggle all checkboxes ===== */
+function toggleAll(chk){
+  const rows = document.querySelectorAll('.rowChk');
+  rows.forEach(r=> r.checked = chk.checked);
+}
+
+/* ===== delete selected results ===== */
+function deleteSelected(){
+  const checked = Array.from(document.querySelectorAll('.rowChk')).filter(c=>c.checked);
+  if(checked.length===0){ alert('لم تختر أي نتيجة للحذف'); return; }
+  if(!confirm(متأكد أنك عايز تمسح ${checked.length} نتيجة؟ العملية لا يمكن التراجع عنها.)) return;
+  // perform deletions sequentially
+  let errors = [];
+  let done = 0;
+  checked.forEach(chk=>{
+    const key = chk.getAttribute('data-key');
+    db.ref('results/' + key).remove().then(()=>{
+      done++;
+      // remove row from UI
+      const tr = chk.closest('tr');
+      if(tr) tr.remove();
+    }).catch(err=>{
+      errors.push(err.message||String(err));
+    });
+  });
+  setTimeout(()=>{
+    if(errors.length) alert('حصلت بعض الأخطاء أثناء الحذف: ' + errors.join('; '));
+    else alert('تم حذف النتائج المحددة بنجاح');
+  }, 700);
+}
+
+/* ===== delete all (with confirm) ===== */
+function deleteAllConfirm(){
+  if(!confirm('متأكد تمامًا؟ سيتم حذف كل النتائج من قاعدة البيانات (لا يمكن التراجع).')) return;
+  // remove entire node results
+  db.ref('results').remove().then(()=>{
+    document.getElementById('resultsList').innerHTML = '<div style="color:green;font-weight:700">تم حذف كل النتائج.</div>';
+    alert('تم مسح كل النتائج بنجاح');
+  }).catch(err=>{
+    alert('حصل خطأ أثناء حذف الكل: ' + err.message);
+  });
+}
+
+/* ===== utilities ===== */
+function sanitizeKey(s){ return s.replace(/\s+/g,'_').replace(/[^\w\u0600-\u06FF\-]/g,''); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===== restore state if reloaded mid-exam ===== */
+window.addEventListener('load', ()=>{
+  // restore any ongoing exam for currentStudent if exists
+  const s = localStorage.getItem('currentStudent');
+  if(s){
+    try{
+      const obj = JSON.parse(s);
+      currentSubject = obj.subject;
+      subjectLabel.innerText = 'المادة: ' + (currentSubject==='economy' ? 'مبادئ الاقتصاد' : 'تاريخ مصر القديمة');
+      studentData = obj;
+      const endKey = 'endTime_' + sanitizeKey(obj.name + '_' + obj.subject);
+      const endVal = localStorage.getItem(endKey);
+      if(endVal){
+        document.getElementById('homeSection').style.display='none';
+        document.getElementById('examSection').style.display='block';
+        renderQuestions();
+        for(let q in obj.answers){
+          const el = document.querySelector(input[name="${q}"][value="${obj.answers[q]}"]);
+          if(el) el.checked = true;
+        }
+        startTimer(parseInt(endVal,10));
+      } else {
+        localStorage.removeItem('currentStudent');
+      }
+    }catch(e){ console.warn('restore failed', e); }
+  }
+});
+</script>
+</body>
+</html>
